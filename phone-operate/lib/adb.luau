@@ -11,13 +11,20 @@ local function runNext()
 		return
 	end
 	local cmd = cmdQueue[1]
-	noctalia.runAsync(cmd.cmdline, function(res)
+	if not noctalia.runAsync(cmd.cmdline, function(res)
 		if cmd.callback ~= nil then
-			cmd.callback(res)
+			local ok, err = pcall(cmd.callback, res)
+			if not ok then
+				noctalia.log("[phone-operate] adb callback error: " .. tostring(err))
+			end
 		end
 		table.remove(cmdQueue, 1)
 		runNext()
-	end)
+	end) then
+		noctalia.log("[phone-operate] adb launch failed: " .. cmd.cmdline)
+		table.remove(cmdQueue, 1)
+		runNext()
+	end
 end
 
 local function runAdb(cmdline, callback)
